@@ -24,4 +24,5 @@ public class Game
     // --- NEW: For Sorting Features ---
     public double AverageRating { get; set; } = 0;
     public List<User> LikedByUsers { get; set; } = [];
+    public List<Review> Reviews { get; set; } = [];
 }

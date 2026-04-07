@@ -9,5 +9,6 @@ public interface IApplicationDbContext
     DbSet<Genre> Genres { get; }
     DbSet<User> Users { get; }
     DbSet<CustomList> CustomLists { get; }
+    DbSet<Review> Reviews { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
