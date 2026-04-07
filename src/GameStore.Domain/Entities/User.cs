@@ -17,4 +17,5 @@ public class User
     public List<Game> OwnedGames { get; set; } = [];
     public List<Game> LikedGames { get; set; } = [];
     public List<CustomList> CustomLists { get; set; } = [];
+    public List<Review> Reviews { get; set; } = [];
 }
