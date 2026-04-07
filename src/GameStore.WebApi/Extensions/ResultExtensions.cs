@@ -13,6 +13,7 @@ public static class ResultExtensions
             "Game.NotFound" => StatusCodes.Status404NotFound,
             "Auth.InvalidCredentials" => StatusCodes.Status401Unauthorized,
             "Auth.EmailAlreadyExists" => StatusCodes.Status409Conflict,
+            "Auth.Forbidden" => StatusCodes.Status403Forbidden, // <-- NEW
             "Error.ConditionNotMet" => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };

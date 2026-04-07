@@ -19,12 +19,17 @@ public class LoginQueryHandler(
 {
     public async Task<Result<AuthResponseDto>> Handle(LoginQuery request, CancellationToken cancellationToken)
     {
-        // 1. Authenticate via Identity (Checks password)
         var identityResult = await identityService.AuthenticateUserAsync(request.Email, request.Password);
         if (identityResult.IsFailure) return Result.Failure<AuthResponseDto>(identityResult.Error);
 
         var user = await context.Users.FirstOrDefaultAsync(u => u.IdentityId == identityResult.Value.IdentityId, cancellationToken);
         if (user is null) return Result.Failure<AuthResponseDto>(AuthErrors.InvalidCredentials);
+
+        // --- NEW: Check if the user is activated ---
+        if (!user.IsActive)
+        {
+            return Result.Failure<AuthResponseDto>(new Error("Auth.Inactive", "Your account is pending activation by a SuperAdmin, or has been disabled."));
+        }
 
         user.LastLogin = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);

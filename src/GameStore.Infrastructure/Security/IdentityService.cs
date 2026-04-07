@@ -57,6 +57,35 @@ public class IdentityService(UserManager<ApplicationUser> userManager) : IIdenti
         return Result.Success((user.Id, newRefreshToken));
     }
 
+    public async Task<Result> DeleteUserAsync(string identityId)
+    {
+        var user = await userManager.FindByIdAsync(identityId);
+        if (user == null) return Result.Success(); // Idempotent
+
+        var result = await userManager.DeleteAsync(user);
+        return result.Succeeded ? Result.Success() : Result.Failure(new Error("Identity.DeleteFailed", "Failed to delete identity user."));
+    }
+
+    public async Task<Result<string>> GeneratePasswordResetTokenAsync(string email)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user == null) return Result.Failure<string>(AuthErrors.InvalidCredentials);
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        return Result.Success(token);
+    }
+
+    public async Task<Result> ResetPasswordAsync(string email, string token, string newPassword)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user == null) return Result.Failure(AuthErrors.InvalidCredentials);
+
+        var result = await userManager.ResetPasswordAsync(user, token, newPassword);
+        if (!result.Succeeded) return Result.Failure(new Error("Identity.ResetFailed", result.Errors.First().Description));
+
+        return Result.Success();
+    }
+
     private static string GenerateRefreshToken()
     {
         var randomNumber = new byte[64];

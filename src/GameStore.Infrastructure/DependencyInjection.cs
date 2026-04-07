@@ -37,7 +37,8 @@ public static class DependencyInjection
             options.User.RequireUniqueEmail = true;
         })
             .AddRoles<IdentityRole>()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
         // --- NEW: Hybrid Cache ---
         services.AddHybridCache(options =>
