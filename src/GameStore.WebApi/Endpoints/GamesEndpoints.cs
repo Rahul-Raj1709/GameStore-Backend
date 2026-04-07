@@ -24,9 +24,18 @@ public static class GamesEndpoints
         var group = app.MapGroup("/api/games");
         var requireAdmin = new AuthorizeAttribute { Roles = $"{RoleConstants.SuperAdmin},{RoleConstants.Admin}" };
 
-        group.MapGet("/", async ([FromQuery] int? cursor, [FromQuery] int? limit, IQueryHandler<GetGamesQuery, Result<PagedResponse<GameSummaryDto>>> handler, CancellationToken ct) =>
+        group.MapGet("/", async (
+             [FromQuery] string? search,
+             [FromQuery] int? genreId,
+             [FromQuery] string? sortBy,
+             [FromQuery] bool? desc,
+             [FromQuery] int? page,
+             [FromQuery] int? pageSize,
+             IQueryHandler<GetGamesQuery, Result<PagedList<GameSummaryDto>>> handler,
+             CancellationToken ct) =>
         {
-            var result = await handler.Handle(new GetGamesQuery(cursor, limit ?? 10), ct);
+            var query = new GetGamesQuery(search, genreId, sortBy, desc ?? false, page ?? 1, pageSize ?? 10);
+            var result = await handler.Handle(query, ct);
             return result.Match(Results.Ok);
         });
 

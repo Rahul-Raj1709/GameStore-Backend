@@ -23,13 +23,11 @@ public class ToggleLikeCommandHandler(IApplicationDbContext context) : ICommandH
         if (alreadyLiked)
         {
             user.LikedGames.Remove(game);
-            game.TotalLikes--;
             isLikedNow = false;
         }
         else
         {
             user.LikedGames.Add(game);
-            game.TotalLikes++;
             isLikedNow = true;
         }
 
