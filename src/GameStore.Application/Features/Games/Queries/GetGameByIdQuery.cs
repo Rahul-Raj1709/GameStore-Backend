@@ -4,7 +4,7 @@ using GameStore.Application.Messaging;
 using GameStore.Domain.Errors;
 using GameStore.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Hybrid; // <-- NEW
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace GameStore.Application.Features.Games.Queries;
 
@@ -17,15 +17,23 @@ public class GetGameByIdQueryHandler(IApplicationDbContext context, HybridCache 
     {
         var cacheKey = $"game-details-{request.Id}";
 
-        // HybridCache will check memory, then Redis. If both miss, it executes the factory method below.
         var game = await cache.GetOrCreateAsync(
             cacheKey,
             async cancel => await context.Games
                 .AsNoTracking()
                 .Where(g => g.Id == request.Id)
                 .Select(g => new GameDetailsDto(
-                    g.Id, g.Name, g.Description, g.ImageUrl, g.GenreId, g.Genre!.Name,
-                    g.Price, g.ReleaseDate, g.AddedAt, g.TotalLikes, g.Owner!.Name
+                    g.Id,
+                    g.Name,
+                    g.Description,
+                    g.ImageUrl,
+                    g.GenreId,
+                    g.Genre!.Name,
+                    g.Price,
+                    g.ReleaseDate,
+                    g.CreatedAt,            // <-- FIXED 
+                    g.LikedByUsers.Count,   // <-- FIXED
+                    g.Owner!.Name
                 ))
                 .FirstOrDefaultAsync(cancel),
             cancellationToken: cancellationToken);

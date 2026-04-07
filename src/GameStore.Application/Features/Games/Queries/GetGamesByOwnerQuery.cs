@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 
 namespace GameStore.Application.Features.Games.Queries;
 
+// Notice this still uses Cursor and Limit
 public record GetGamesByOwnerQuery(int OwnerId, int? Cursor = null, int Limit = 10) : IQuery<Result<PagedResponse<GameSummaryDto>>>;
 
 public class GetGamesByOwnerQueryHandler(IApplicationDbContext context, HybridCache cache)
@@ -20,8 +21,9 @@ public class GetGamesByOwnerQueryHandler(IApplicationDbContext context, HybridCa
             cacheKey,
             async cancel =>
             {
-                var query = context.Games.AsNoTracking().Where(g => g.OwnerId == request.OwnerId);
+                var query = context.Games.Include(g => g.Genre).AsNoTracking().Where(g => g.OwnerId == request.OwnerId);
 
+                // Cursor condition
                 if (request.Cursor.HasValue) query = query.Where(g => g.Id < request.Cursor.Value);
 
                 var games = await query
@@ -41,6 +43,6 @@ public class GetGamesByOwnerQueryHandler(IApplicationDbContext context, HybridCa
             },
             cancellationToken: cancellationToken);
 
-        return Result.Success(response);
+        return Result.Success(response!);
     }
 }
