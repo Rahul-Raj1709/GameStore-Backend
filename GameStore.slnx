@@ -1,6 +1,14 @@
 <Solution>
-  <Project Path="GameStore.Application/GameStore.Application.csproj" />
-  <Project Path="GameStore.Domain/GameStore.Domain.csproj" />
-  <Project Path="GameStore.Infrastructure/GameStore.Infrastructure.csproj" />
-  <Project Path="GameStore.WebApi/GameStore.WebApi.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/GameStore.Domain/GameStore.Domain.csproj" />
+    <Project Path="src/GameStore.Application/GameStore.Application.csproj" />
+    <Project Path="src/GameStore.Infrastructure/GameStore.Infrastructure.csproj" />
+    <Project Path="src/GameStore.WebApi/GameStore.WebApi.csproj" />
+    <Project Path="src/GameStore.AppHost/GameStore.AppHost.csproj" />
+    <Project Path="src/GameStore.ServiceDefaults/GameStore.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GameStore.Application.Tests/GameStore.Application.Tests.csproj" />
+    <Project Path="tests/GameStore.Architecture.Tests/GameStore.Architecture.Tests.csproj" />
+  </Folder>
 </Solution>

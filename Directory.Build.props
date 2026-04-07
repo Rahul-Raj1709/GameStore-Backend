@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <SuppressAspNetCoreWorkloadDeprecationWarning>true</SuppressAspNetCoreWorkloadDeprecationWarning>
+    
+    <NoWarn>$(NoWarn);NETSDK1228;NU1902;ASPIRE002</NoWarn>
+  </PropertyGroup>
+</Project>
