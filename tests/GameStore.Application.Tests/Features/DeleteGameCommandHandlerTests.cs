@@ -24,7 +24,7 @@ public class DeleteGameCommandHandlerTests
     public async Task Handle_ShouldReturnFailure_WhenGameDoesNotExist()
     {
         // Arrange: Command requests deletion of ID 999
-        var command = new DeleteGameCommand(999);
+        var command = new DeleteGameCommand(999, 1, false);
 
         // Properly mock the DbSet so FindAsync returns null
         var mockDbSet = Substitute.For<DbSet<Game>, IQueryable<Game>>();
