@@ -14,11 +14,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Temporarily comment out the configuration read
-        // var connectionString = configuration.GetConnectionString("DefaultConnection");
-
-        // Hardcode it just for this migration step
-        var connectionString = "Server=127.0.0.1;Database=GameStore;Uid=root;Pwd=kerberos1;";
+        var connectionString = configuration.GetConnectionString("GameStoreDb")
+            ?? throw new InvalidOperationException("Connection string 'GameStoreDb' not found in configuration.");
 
         var serverVersion = new MySqlServerVersion(new Version(8, 0, 35));
 
