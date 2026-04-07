@@ -4,6 +4,7 @@ using GameStore.Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GameStore.Infrastructure.Contexts.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260407101731_AddUserActivationFlag")]
+    partial class AddUserActivationFlag
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,46 +24,6 @@ namespace GameStore.Infrastructure.Contexts.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
-
-            modelBuilder.Entity("CustomListGame", b =>
-                {
-                    b.Property<int>("CustomListsId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("GamesId")
-                        .HasColumnType("int");
-
-                    b.HasKey("CustomListsId", "GamesId");
-
-                    b.HasIndex("GamesId");
-
-                    b.ToTable("CustomListGame");
-                });
-
-            modelBuilder.Entity("GameStore.Domain.Entities.CustomList", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("CustomLists");
-                });
 
             modelBuilder.Entity("GameStore.Domain.Entities.Game", b =>
                 {
@@ -308,21 +271,21 @@ namespace GameStore.Infrastructure.Contexts.Migrations
                         new
                         {
                             Id = "1",
-                            ConcurrencyStamp = "3cb2943b-f887-47fc-ad26-c08d68d036a6",
+                            ConcurrencyStamp = "26e0f49d-9c48-4730-84f4-79c2a93f84ef",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         },
                         new
                         {
                             Id = "2",
-                            ConcurrencyStamp = "13148cec-deeb-4a41-8a17-effc3e0ffe30",
+                            ConcurrencyStamp = "5541c926-4461-41f7-8dd4-ce9b16ff3f07",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
                             Id = "3",
-                            ConcurrencyStamp = "e328fae3-da23-49e1-8279-c0e11907fdc7",
+                            ConcurrencyStamp = "637d5112-7942-418f-9b89-2770d701303f",
                             Name = "Customer",
                             NormalizedName = "CUSTOMER"
                         });
@@ -434,32 +397,6 @@ namespace GameStore.Infrastructure.Contexts.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("CustomListGame", b =>
-                {
-                    b.HasOne("GameStore.Domain.Entities.CustomList", null)
-                        .WithMany()
-                        .HasForeignKey("CustomListsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GameStore.Domain.Entities.Game", null)
-                        .WithMany()
-                        .HasForeignKey("GamesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("GameStore.Domain.Entities.CustomList", b =>
-                {
-                    b.HasOne("GameStore.Domain.Entities.User", "User")
-                        .WithMany("CustomLists")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("GameStore.Domain.Entities.Game", b =>
                 {
                     b.HasOne("GameStore.Domain.Entities.Genre", "Genre")
@@ -547,8 +484,6 @@ namespace GameStore.Infrastructure.Contexts.Migrations
 
             modelBuilder.Entity("GameStore.Domain.Entities.User", b =>
                 {
-                    b.Navigation("CustomLists");
-
                     b.Navigation("OwnedGames");
                 });
 #pragma warning restore 612, 618

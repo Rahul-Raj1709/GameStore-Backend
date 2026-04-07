@@ -24,21 +24,30 @@ public class RegisterCommandHandler(
     {
         var roleToAssign = string.IsNullOrWhiteSpace(request.Role) ? RoleConstants.Customer : request.Role;
 
-        // 1. Create the secure Identity User
         var identityResult = await identityService.RegisterUserAsync(request.Email, request.Username, request.Password, roleToAssign);
         if (identityResult.IsFailure) return Result.Failure<AuthResponseDto>(identityResult.Error);
 
+        // --- NEW: Admins need SuperAdmin approval to become active ---
+        bool isActive = roleToAssign != RoleConstants.Admin;
+
         var user = new User
         {
-            IdentityId = identityResult.Value.IdentityId, // <-- Use the tuple value
+            IdentityId = identityResult.Value.IdentityId,
             Name = request.Name,
             Username = request.Username,
             Email = request.Email,
-            Role = roleToAssign
+            Role = roleToAssign,
+            IsActive = isActive // Set the flag
         };
 
         context.Users.Add(user);
         await context.SaveChangesAsync(cancellationToken);
+
+        // If inactive, we shouldn't return a valid JWT token yet.
+        if (!isActive)
+        {
+            return Result.Success(new AuthResponseDto(user.Id, user.Username, user.Email, user.Role, "PENDING_ACTIVATION", ""));
+        }
 
         var token = jwtTokenGenerator.GenerateToken(user);
         return Result.Success(new AuthResponseDto(user.Id, user.Username, user.Email, user.Role, token, identityResult.Value.RefreshToken));

@@ -32,5 +32,18 @@ public static class AuthEndpoints
             var result = await handler.Handle(command, ct);
             return result.Match(Results.Ok);
         });
+
+        group.MapPost("/forgot-password", async (RequestPasswordResetCommand command, ICommandHandler<RequestPasswordResetCommand, Result<string>> handler, CancellationToken ct) =>
+        {
+            var result = await handler.Handle(command, ct);
+            // Returns the raw token for testing. In production, this would return Ok() and send an email silently.
+            return result.Match(token => Results.Ok(new { ResetToken = token }));
+        });
+
+        group.MapPost("/reset-password", async (ResetPasswordCommand command, ICommandHandler<ResetPasswordCommand, Result> handler, CancellationToken ct) =>
+        {
+            var result = await handler.Handle(command, ct);
+            return result.Match(() => Results.Ok(new { Message = "Password reset successfully." }));
+        });
     }
 }
