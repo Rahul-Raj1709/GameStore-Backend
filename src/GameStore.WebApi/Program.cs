@@ -1,15 +1,23 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Microsoft.AspNetCore.OpenApi;
+using Scalar.AspNetCore;
+using Serilog;
 using GameStore.Application;
 using GameStore.Infrastructure;
 using GameStore.WebApi.Endpoints;
 using GameStore.WebApi.Middleware;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using Scalar.AspNetCore;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 builder.AddServiceDefaults();
 
@@ -25,11 +33,10 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddOpenApi(options =>
 {
-    // Use the class-based transformer for V2.0.0 compatibility
     options.AddDocumentTransformer<SecuritySchemeTransformer>();
 });
 
@@ -53,6 +60,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
+
 app.MapDefaultEndpoints();
 app.UseCors("AllowAll");
 app.UseExceptionHandler();
@@ -66,31 +75,38 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "GameStore API is running! Navigate to /scalar/v1 to see the documentation.");
+app.MapGet("/", () => "GameStore API is running!");
 
 app.MapGamesEndpoints();
 app.MapAuthEndpoints();
 app.MapUsersEndpoints();
 
-app.Run();
+try
+{
+    Log.Information("Starting GameStore Web API");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
-// --- OPENAPI 2.0 TRANSFORMER (2026 Stable Implementation) ---
-internal sealed class SecuritySchemeTransformer : Microsoft.AspNetCore.OpenApi.IOpenApiDocumentTransformer
+// --- OPENAPI TRANSFORMER ---
+internal sealed class SecuritySchemeTransformer : IOpenApiDocumentTransformer
 {
     public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
     {
-        // 1. Initialize root properties
         document.Components ??= new OpenApiComponents();
-        document.Security ??= new List<OpenApiSecurityRequirement>();
 
-        // 2. Fix CS0019: Use the Interface type for the Dictionary initialization
-        // We avoid ??= here because of the interface vs. concrete class mismatch.
         if (document.Components.SecuritySchemes == null)
         {
             document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>();
         }
 
-        // 3. Define the Scheme
         var bearerScheme = new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.Http,
@@ -99,23 +115,19 @@ internal sealed class SecuritySchemeTransformer : Microsoft.AspNetCore.OpenApi.I
             Description = "Paste your JWT token (eyJ...)"
         };
 
-        // 4. Add to Components if missing
         if (!document.Components.SecuritySchemes.ContainsKey("Bearer"))
         {
             document.Components.SecuritySchemes.Add("Bearer", bearerScheme);
         }
 
-        // 5. Link the scheme to Security Requirements
         var reference = new OpenApiSecuritySchemeReference("Bearer", document);
 
-        if (!document.Security.Any(req => req.ContainsKey(reference)))
+        var requirement = new OpenApiSecurityRequirement
         {
-            var requirement = new OpenApiSecurityRequirement
-            {
-                [reference] = new List<string>()
-            };
-            document.Security.Add(requirement);
-        }
+            { reference, new List<string>() }
+        };
+
+        document.Security = new List<OpenApiSecurityRequirement> { requirement };
 
         return Task.CompletedTask;
     }
