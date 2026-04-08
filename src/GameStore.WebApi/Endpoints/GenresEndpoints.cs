@@ -20,7 +20,7 @@ public static class GenresEndpoints
         var group = app.MapGroup("/api/genres").AddEndpointFilter<ValidationFilter>();
 
         // Only Admins and SuperAdmins can add genres
-        var requireAdmin = new AuthorizeAttribute { Roles = $"{RoleConstants.SuperAdmin},{RoleConstants.Admin}" };
+        var requireSuperAdmin = new AuthorizeAttribute { Roles = RoleConstants.SuperAdmin };
 
         // GET: /api/genres (Publicly accessible for dropdowns)
         group.MapGet("/", async (IQueryHandler<GetGenresQuery, Result<List<GenreDto>>> handler, CancellationToken ct) =>
@@ -35,6 +35,6 @@ public static class GenresEndpoints
             var result = await handler.Handle(new CreateGenreCommand(request.Name), ct);
             return result.Match(id => Results.Ok(new { Id = id, Message = "Genre added successfully." }));
         })
-        .RequireAuthorization(requireAdmin);
+        .RequireAuthorization(requireSuperAdmin);
     }
 }
