@@ -1,14 +1,13 @@
 ﻿using GameStore.Application.Interfaces;
 using GameStore.Domain.Constants;
 using GameStore.Domain.Entities;
-using GameStore.Infrastructure.Identity; // <-- NEW
-using Microsoft.AspNetCore.Identity;     // <-- NEW
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore; // <-- NEW
+using GameStore.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Infrastructure.Contexts;
 
-// 1. Inherit from IdentityDbContext
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : IdentityDbContext<ApplicationUser>(options), IApplicationDbContext
 {
@@ -17,11 +16,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public new DbSet<User> Users => Set<User>();
     public DbSet<CustomList> CustomLists => Set<CustomList>();
     public DbSet<Review> Reviews => Set<Review>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder); // 2. CRITICAL for Identity tables!
+        base.OnModelCreating(modelBuilder);
 
-        // 3. Seed Identity Roles
+        // --- ENFORCE UNIQUE GENRE NAMES ---
+        modelBuilder.Entity<Genre>()
+            .HasIndex(g => g.Name)
+            .IsUnique();
+
         modelBuilder.Entity<IdentityRole>().HasData(
             new IdentityRole { Id = "1", Name = RoleConstants.SuperAdmin, NormalizedName = RoleConstants.SuperAdmin.ToUpper() },
             new IdentityRole { Id = "2", Name = RoleConstants.Admin, NormalizedName = RoleConstants.Admin.ToUpper() },
@@ -34,6 +38,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(g => g.OwnerId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // --- DEFAULT SEEDED GENRES ---
         modelBuilder.Entity<Genre>().HasData(
             new Genre { Id = 1, Name = "Fighting" },
             new Genre { Id = 2, Name = "Roleplaying" },
