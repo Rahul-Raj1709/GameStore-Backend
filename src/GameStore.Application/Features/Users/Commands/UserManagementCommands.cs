@@ -1,5 +1,4 @@
-﻿using GameStore.Application.DTOs;
-using GameStore.Application.Interfaces;
+﻿using GameStore.Application.Interfaces;
 using GameStore.Application.Interfaces.Security;
 using GameStore.Application.Messaging;
 using GameStore.Domain.Constants;
@@ -18,6 +17,10 @@ public class UpdateUserStatusCommandHandler(IApplicationDbContext context) : ICo
         var user = await context.Users.FindAsync([request.UserId], cancellationToken);
         if (user == null) return Result.Failure(new Error("User.NotFound", "User not found."));
 
+        // Protect SuperAdmin accounts
+        if (user.Role == RoleConstants.SuperAdmin)
+            return Result.Failure(new Error("Auth.Forbidden", "Cannot modify the status of a SuperAdmin."));
+
         user.IsActive = request.IsActive;
         await context.SaveChangesAsync(cancellationToken);
 
@@ -26,20 +29,29 @@ public class UpdateUserStatusCommandHandler(IApplicationDbContext context) : ICo
 }
 
 // --- COMMAND: Delete User ---
-public record RemoveUserCommand(int UserId) : ICommand<Result>;
+// Added CurrentUserId to prevent self-deletion
+public record RemoveUserCommand(int UserId, int CurrentUserId) : ICommand<Result>;
 
 public class RemoveUserCommandHandler(IApplicationDbContext context, IIdentityService identityService) : ICommandHandler<RemoveUserCommand, Result>
 {
     public async Task<Result> Handle(RemoveUserCommand request, CancellationToken cancellationToken)
     {
+        // 1. Prevent Self Deletion
+        if (request.UserId == request.CurrentUserId)
+            return Result.Failure(new Error("Auth.Forbidden", "You cannot delete your own account."));
+
         var user = await context.Users.FindAsync([request.UserId], cancellationToken);
         if (user == null) return Result.Failure(new Error("User.NotFound", "User not found."));
 
-        // 1. Delete from Identity Database
+        // 2. Prevent SuperAdmin Deletion
+        if (user.Role == RoleConstants.SuperAdmin)
+            return Result.Failure(new Error("Auth.Forbidden", "Cannot delete a SuperAdmin account."));
+
+        // Delete from Identity Database
         var identityResult = await identityService.DeleteUserAsync(user.IdentityId);
         if (identityResult.IsFailure) return identityResult;
 
-        // 2. Delete from Application Database
+        // Delete from Application Database
         context.Users.Remove(user);
         await context.SaveChangesAsync(cancellationToken);
 
@@ -47,8 +59,8 @@ public class RemoveUserCommandHandler(IApplicationDbContext context, IIdentitySe
     }
 }
 
-// --- QUERY: Get Pending Admins ---
-public record GetPendingAdminsQuery() : IQuery<Result<List<object>>>; // Using object strictly for brevity in the summary output
+// --- QUERY: Get Pending Admins (Remains the same) ---
+public record GetPendingAdminsQuery() : IQuery<Result<List<object>>>;
 
 public class GetPendingAdminsQueryHandler(IApplicationDbContext context) : IQueryHandler<GetPendingAdminsQuery, Result<List<object>>>
 {
