@@ -80,6 +80,7 @@ app.MapGet("/", () => "GameStore API is running!");
 app.MapGamesEndpoints();
 app.MapAuthEndpoints();
 app.MapUsersEndpoints();
+app.MapGenresEndpoints();
 
 try
 {
