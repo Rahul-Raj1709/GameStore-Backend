@@ -34,9 +34,13 @@ public static class UsersEndpoints
         // --- SuperAdmin Management Endpoints ---
         var adminGroup = group.MapGroup("/admin").RequireAuthorization(requireSuperAdmin);
 
-        adminGroup.MapGet("/admins", async (IQueryHandler<GetAdminsQuery, Result<List<AdminSummaryDto>>> handler, CancellationToken ct) =>
+        adminGroup.MapGet("/admins", async (
+            IQueryHandler<GetAdminsQuery, Result<PagedList<AdminSummaryDto>>> handler,
+            CancellationToken ct,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10) =>
         {
-            var result = await handler.Handle(new GetAdminsQuery(), ct);
+            var result = await handler.Handle(new GetAdminsQuery(page, pageSize), ct);
             return result.Match(Results.Ok);
         });
 
@@ -46,9 +50,13 @@ public static class UsersEndpoints
             return result.Match(Results.Ok);
         });
 
-        adminGroup.MapGet("/pending", async (IQueryHandler<GetPendingAdminsQuery, Result<List<PendingAdminDto>>> handler, CancellationToken ct) =>
+        adminGroup.MapGet("/pending", async (
+            IQueryHandler<GetPendingAdminsQuery, Result<PagedList<PendingAdminDto>>> handler,
+            CancellationToken ct,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10) =>
         {
-            var result = await handler.Handle(new GetPendingAdminsQuery(), ct);
+            var result = await handler.Handle(new GetPendingAdminsQuery(page, pageSize), ct);
             return result.Match(Results.Ok);
         });
 
