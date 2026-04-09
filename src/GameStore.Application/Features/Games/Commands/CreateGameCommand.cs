@@ -1,7 +1,7 @@
 ﻿using GameStore.Application.Interfaces;
-using GameStore.Application.Messaging; // <-- NEW
+using GameStore.Application.Messaging;
 using GameStore.Domain.Entities;
-using GameStore.Domain.Shared;         // <-- NEW
+using GameStore.Domain.Shared;
 
 namespace GameStore.Application.Features.Games.Commands;
 
@@ -30,6 +30,9 @@ public class CreateGameCommandHandler(IApplicationDbContext context)
 
         context.Games.Add(game);
         await context.SaveChangesAsync(cancellationToken);
+
+        // Note: No cache invalidation needed here. A new ID is created, 
+        // which means there is no stale game-details-{id} cache to clear.
 
         // 3. Return Success with the new ID
         return Result.Success(game.Id);

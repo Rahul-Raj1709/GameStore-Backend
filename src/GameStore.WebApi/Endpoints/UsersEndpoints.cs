@@ -34,21 +34,19 @@ public static class UsersEndpoints
         // --- SuperAdmin Management Endpoints ---
         var adminGroup = group.MapGroup("/admin").RequireAuthorization(requireSuperAdmin);
 
-        // NEW: Get all Admins
-        adminGroup.MapGet("/admins", async (IQueryHandler<GetAdminsQuery, Result<List<object>>> handler, CancellationToken ct) =>
+        adminGroup.MapGet("/admins", async (IQueryHandler<GetAdminsQuery, Result<List<AdminSummaryDto>>> handler, CancellationToken ct) =>
         {
             var result = await handler.Handle(new GetAdminsQuery(), ct);
             return result.Match(Results.Ok);
         });
 
-        // NEW: Get specific user details
-        adminGroup.MapGet("/{id:int}", async ([FromRoute] int id, IQueryHandler<GetUserDetailsQuery, Result<object>> handler, CancellationToken ct) =>
+        adminGroup.MapGet("/{id:int}", async ([FromRoute] int id, IQueryHandler<GetUserDetailsQuery, Result<UserDetailsDto>> handler, CancellationToken ct) =>
         {
             var result = await handler.Handle(new GetUserDetailsQuery(id), ct);
             return result.Match(Results.Ok);
         });
 
-        adminGroup.MapGet("/pending", async (IQueryHandler<GetPendingAdminsQuery, Result<List<object>>> handler, CancellationToken ct) =>
+        adminGroup.MapGet("/pending", async (IQueryHandler<GetPendingAdminsQuery, Result<List<PendingAdminDto>>> handler, CancellationToken ct) =>
         {
             var result = await handler.Handle(new GetPendingAdminsQuery(), ct);
             return result.Match(Results.Ok);
@@ -60,7 +58,6 @@ public static class UsersEndpoints
             return result.Match(() => Results.NoContent());
         });
 
-        // UPDATED: Pass the current User ID to prevent self-deletion
         adminGroup.MapDelete("/{id:int}", async ([FromRoute] int id, ClaimsPrincipal user, ICommandHandler<RemoveUserCommand, Result> handler, CancellationToken ct) =>
         {
             var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;

@@ -3,12 +3,13 @@ using GameStore.Application.Messaging;
 using GameStore.Domain.Errors;
 using GameStore.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid; // <-- Added
 
 namespace GameStore.Application.Features.Games.Commands;
 
 public record ToggleLikeCommand(int UserId, int GameId) : ICommand<Result<bool>>;
 
-public class ToggleLikeCommandHandler(IApplicationDbContext context) : ICommandHandler<ToggleLikeCommand, Result<bool>>
+public class ToggleLikeCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<ToggleLikeCommand, Result<bool>> // <-- Injected HybridCache
 {
     public async Task<Result<bool>> Handle(ToggleLikeCommand request, CancellationToken cancellationToken)
     {
@@ -32,6 +33,10 @@ public class ToggleLikeCommandHandler(IApplicationDbContext context) : ICommandH
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // --- CACHE INVALIDATION ---
+        await cache.RemoveAsync($"game-details-{request.GameId}", cancellationToken);
+
         return Result.Success(isLikedNow);
     }
 }

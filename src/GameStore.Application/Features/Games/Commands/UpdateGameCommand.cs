@@ -2,13 +2,14 @@
 using GameStore.Application.Messaging;
 using GameStore.Domain.Errors;
 using GameStore.Domain.Shared;
+using Microsoft.Extensions.Caching.Hybrid; // <-- Added
 
 namespace GameStore.Application.Features.Games.Commands;
 
 public record UpdateGameCommand(int Id, string Name, string Description, string? ImageUrl, int GenreId, decimal? Price, DateOnly ReleaseDate, int CurrentUserId, bool IsSuperAdmin)
     : ICommand<Result>;
 
-public class UpdateGameCommandHandler(IApplicationDbContext context) : ICommandHandler<UpdateGameCommand, Result>
+public class UpdateGameCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<UpdateGameCommand, Result> // <-- Injected HybridCache
 {
     public async Task<Result> Handle(UpdateGameCommand request, CancellationToken cancellationToken)
     {
@@ -29,6 +30,10 @@ public class UpdateGameCommandHandler(IApplicationDbContext context) : ICommandH
         game.ReleaseDate = request.ReleaseDate;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // --- CACHE INVALIDATION ---
+        await cache.RemoveAsync($"game-details-{request.Id}", cancellationToken);
+
         return Result.Success();
     }
 }

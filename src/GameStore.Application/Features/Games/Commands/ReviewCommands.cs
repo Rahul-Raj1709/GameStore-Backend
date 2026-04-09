@@ -4,13 +4,14 @@ using GameStore.Domain.Entities;
 using GameStore.Domain.Errors;
 using GameStore.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid; // <-- Added
 
 namespace GameStore.Application.Features.Games.Commands;
 
 // --- 1. ADD REVIEW ---
 public record AddReviewCommand(int GameId, int UserId, int Rating, string? Comment) : ICommand<Result<int>>;
 
-public class AddReviewCommandHandler(IApplicationDbContext context) : ICommandHandler<AddReviewCommand, Result<int>>
+public class AddReviewCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<AddReviewCommand, Result<int>> // <-- Injected HybridCache
 {
     public async Task<Result<int>> Handle(AddReviewCommand request, CancellationToken cancellationToken)
     {
@@ -28,6 +29,9 @@ public class AddReviewCommandHandler(IApplicationDbContext context) : ICommandHa
 
         await RecalculateAverageRatingAsync(context, game, cancellationToken);
 
+        // --- CACHE INVALIDATION ---
+        await cache.RemoveAsync($"game-details-{request.GameId}", cancellationToken);
+
         return Result.Success(review.Id);
     }
 
@@ -42,7 +46,7 @@ public class AddReviewCommandHandler(IApplicationDbContext context) : ICommandHa
 // --- 2. UPDATE REVIEW ---
 public record UpdateReviewCommand(int ReviewId, int UserId, int Rating, string? Comment, bool IsSuperAdmin) : ICommand<Result>;
 
-public class UpdateReviewCommandHandler(IApplicationDbContext context) : ICommandHandler<UpdateReviewCommand, Result>
+public class UpdateReviewCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<UpdateReviewCommand, Result> // <-- Injected HybridCache
 {
     public async Task<Result> Handle(UpdateReviewCommand request, CancellationToken cancellationToken)
     {
@@ -60,6 +64,9 @@ public class UpdateReviewCommandHandler(IApplicationDbContext context) : IComman
         await context.SaveChangesAsync(cancellationToken);
         await AddReviewCommandHandler.RecalculateAverageRatingAsync(context, review.Game!, cancellationToken);
 
+        // --- CACHE INVALIDATION ---
+        await cache.RemoveAsync($"game-details-{review.GameId}", cancellationToken);
+
         return Result.Success();
     }
 }
@@ -67,7 +74,7 @@ public class UpdateReviewCommandHandler(IApplicationDbContext context) : IComman
 // --- 3. DELETE REVIEW ---
 public record DeleteReviewCommand(int ReviewId, int UserId, bool IsSuperAdmin) : ICommand<Result>;
 
-public class DeleteReviewCommandHandler(IApplicationDbContext context) : ICommandHandler<DeleteReviewCommand, Result>
+public class DeleteReviewCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<DeleteReviewCommand, Result> // <-- Injected HybridCache
 {
     public async Task<Result> Handle(DeleteReviewCommand request, CancellationToken cancellationToken)
     {
@@ -80,6 +87,9 @@ public class DeleteReviewCommandHandler(IApplicationDbContext context) : IComman
         await context.SaveChangesAsync(cancellationToken);
 
         await AddReviewCommandHandler.RecalculateAverageRatingAsync(context, review.Game!, cancellationToken);
+
+        // --- CACHE INVALIDATION ---
+        await cache.RemoveAsync($"game-details-{review.GameId}", cancellationToken);
 
         return Result.Success();
     }

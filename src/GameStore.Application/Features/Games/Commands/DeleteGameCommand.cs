@@ -2,12 +2,13 @@
 using GameStore.Application.Messaging;
 using GameStore.Domain.Errors;
 using GameStore.Domain.Shared;
+using Microsoft.Extensions.Caching.Hybrid; // <-- Added
 
 namespace GameStore.Application.Features.Games.Commands;
 
 public record DeleteGameCommand(int Id, int CurrentUserId, bool IsSuperAdmin) : ICommand<Result>;
 
-public class DeleteGameCommandHandler(IApplicationDbContext context) : ICommandHandler<DeleteGameCommand, Result>
+public class DeleteGameCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<DeleteGameCommand, Result> // <-- Injected HybridCache
 {
     public async Task<Result> Handle(DeleteGameCommand request, CancellationToken cancellationToken)
     {
@@ -22,6 +23,9 @@ public class DeleteGameCommandHandler(IApplicationDbContext context) : ICommandH
 
         context.Games.Remove(game);
         await context.SaveChangesAsync(cancellationToken);
+
+        // --- CACHE INVALIDATION ---
+        await cache.RemoveAsync($"game-details-{request.Id}", cancellationToken);
 
         return Result.Success();
     }
