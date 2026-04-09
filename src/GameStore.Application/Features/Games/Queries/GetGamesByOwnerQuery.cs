@@ -6,37 +6,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Application.Features.Games.Queries;
 
-public record GetGamesByOwnerQuery(int OwnerId, int? Cursor = null, int Limit = 10) : IQuery<Result<PagedResponse<GameSummaryDto>>>;
+public record GetGamesByOwnerQuery(int OwnerId, int Page = 1, int PageSize = 10) : IQuery<Result<PagedList<GameSummaryDto>>>;
 
 public class GetGamesByOwnerQueryHandler(IApplicationDbContext context)
-    : IQueryHandler<GetGamesByOwnerQuery, Result<PagedResponse<GameSummaryDto>>>
+    : IQueryHandler<GetGamesByOwnerQuery, Result<PagedList<GameSummaryDto>>>
 {
-    public async Task<Result<PagedResponse<GameSummaryDto>>> Handle(GetGamesByOwnerQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedList<GameSummaryDto>>> Handle(GetGamesByOwnerQuery request, CancellationToken cancellationToken)
     {
         var query = context.Games
             .Include(g => g.Genre)
             .AsNoTracking()
             .Where(g => g.OwnerId == request.OwnerId);
 
-        // Cursor condition
-        if (request.Cursor.HasValue)
-        {
-            query = query.Where(g => g.Id < request.Cursor.Value);
-        }
+        // 1. Calculate total count for the PagedList metadata
+        var totalCount = await query.CountAsync(cancellationToken);
 
+        // 2. Apply offset (Skip) and limit (Take) 
         var games = await query
             .OrderByDescending(g => g.Id)
-            .Take(request.Limit + 1)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
             .Select(g => new GameSummaryDto(g.Id, g.Name, g.Genre!.Name, g.Price, g.ReleaseDate))
             .ToListAsync(cancellationToken);
 
-        int? nextCursor = null;
-        if (games.Count > request.Limit)
-        {
-            nextCursor = games.Last().Id;
-            games.RemoveAt(games.Count - 1);
-        }
+        // 3. Calculate if a next page exists
+        var hasNextPage = totalCount > (request.Page * request.PageSize);
 
-        return Result.Success(new PagedResponse<GameSummaryDto>(games, nextCursor));
+        // 4. Return standard PagedList response
+        return Result.Success(new PagedList<GameSummaryDto>(games, request.Page, request.PageSize, totalCount, hasNextPage));
     }
 }
