@@ -3,7 +3,6 @@ using GameStore.Application.Interfaces.Security;
 using GameStore.Application.Messaging;
 using GameStore.Domain.Constants;
 using GameStore.Domain.Shared;
-using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Application.Features.Users.Commands;
 
@@ -29,7 +28,6 @@ public class UpdateUserStatusCommandHandler(IApplicationDbContext context) : ICo
 }
 
 // --- COMMAND: Delete User ---
-// Added CurrentUserId to prevent self-deletion
 public record RemoveUserCommand(int UserId, int CurrentUserId) : ICommand<Result>;
 
 public class RemoveUserCommandHandler(IApplicationDbContext context, IIdentityService identityService) : ICommandHandler<RemoveUserCommand, Result>
@@ -56,22 +54,5 @@ public class RemoveUserCommandHandler(IApplicationDbContext context, IIdentitySe
         await context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
-    }
-}
-
-// --- QUERY: Get Pending Admins (Remains the same) ---
-public record GetPendingAdminsQuery() : IQuery<Result<List<object>>>;
-
-public class GetPendingAdminsQueryHandler(IApplicationDbContext context) : IQueryHandler<GetPendingAdminsQuery, Result<List<object>>>
-{
-    public async Task<Result<List<object>>> Handle(GetPendingAdminsQuery request, CancellationToken cancellationToken)
-    {
-        var pendingAdmins = await context.Users
-            .AsNoTracking()
-            .Where(u => u.Role == RoleConstants.Admin && !u.IsActive)
-            .Select(u => new { u.Id, u.Name, u.Email, u.CreatedAt })
-            .ToListAsync(cancellationToken);
-
-        return Result.Success<List<object>>(pendingAdmins.Cast<object>().ToList());
     }
 }
