@@ -46,18 +46,28 @@ public static class GamesEndpoints
         });
 
         // --- 2. Owner Games ---
-        group.MapGet("/owner/{ownerId:int}", async ([FromRoute] int ownerId, [FromQuery] int? cursor, [FromQuery] int? limit, IQueryHandler<GetGamesByOwnerQuery, Result<PagedResponse<GameSummaryDto>>> handler, CancellationToken ct) =>
+        group.MapGet("/owner/{ownerId:int}", async (
+            [FromRoute] int ownerId,
+            IQueryHandler<GetGamesByOwnerQuery, Result<PagedList<GameSummaryDto>>> handler,
+            CancellationToken ct,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10) =>
         {
-            var result = await handler.Handle(new GetGamesByOwnerQuery(ownerId, cursor, limit ?? 10), ct);
+            var result = await handler.Handle(new GetGamesByOwnerQuery(ownerId, page, pageSize), ct);
             return result.Match(Results.Ok);
         });
 
-        group.MapGet("/my-games", async (ClaimsPrincipal user, [FromQuery] int? cursor, [FromQuery] int? limit, IQueryHandler<GetGamesByOwnerQuery, Result<PagedResponse<GameSummaryDto>>> handler, CancellationToken ct) =>
+        group.MapGet("/my-games", async (
+            ClaimsPrincipal user,
+            IQueryHandler<GetGamesByOwnerQuery, Result<PagedList<GameSummaryDto>>> handler,
+            CancellationToken ct,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10) =>
         {
             var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var userId = int.Parse(userIdString!);
 
-            var result = await handler.Handle(new GetGamesByOwnerQuery(userId, cursor, limit ?? 10), ct);
+            var result = await handler.Handle(new GetGamesByOwnerQuery(userId, page, pageSize), ct);
             return result.Match(Results.Ok);
         })
         .RequireAuthorization(requireAdmin);
