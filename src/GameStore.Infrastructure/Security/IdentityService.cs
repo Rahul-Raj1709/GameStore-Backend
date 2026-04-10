@@ -1,9 +1,9 @@
-﻿using System.Security.Cryptography;
-using GameStore.Application.Interfaces.Security;
+﻿using GameStore.Application.Interfaces.Security;
 using GameStore.Domain.Errors;
 using GameStore.Domain.Shared;
 using GameStore.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
+using System.Security.Cryptography;
 
 namespace GameStore.Infrastructure.Security;
 
@@ -82,6 +82,25 @@ public class IdentityService(UserManager<ApplicationUser> userManager) : IIdenti
 
         var result = await userManager.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded) return Result.Failure(new Error("Identity.ResetFailed", result.Errors.First().Description));
+
+        return Result.Success();
+    }
+
+    public async Task<Result> ChangePasswordAsync(string email, string currentPassword, string newPassword)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            return Result.Failure(new Error("Auth.UserNotFound", "User not found."));
+        }
+
+        var result = await userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+
+        if (!result.Succeeded)
+        {
+            var errorMessages = string.Join(", ", result.Errors.Select(e => e.Description));
+            return Result.Failure(new Error("Auth.ChangePasswordFailed", errorMessages));
+        }
 
         return Result.Success();
     }

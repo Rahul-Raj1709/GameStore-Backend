@@ -2,6 +2,7 @@
 using GameStore.Application.Features.Games.Commands;
 using GameStore.Application.Interfaces;
 using GameStore.Domain.Entities;
+using Microsoft.Extensions.Caching.Hybrid;
 using MockQueryable.NSubstitute;
 using NSubstitute;
 using Xunit;
@@ -11,17 +12,19 @@ namespace GameStore.Application.Tests.Features;
 public class CreateGenreCommandHandlerTests
 {
     private readonly IApplicationDbContext _mockDbContext;
+    private readonly HybridCache _mockCache;
 
     public CreateGenreCommandHandlerTests()
     {
         _mockDbContext = Substitute.For<IApplicationDbContext>();
+        _mockCache = Substitute.For<HybridCache>(); // Mock the cache
     }
 
     [Fact]
     public async Task Handle_ShouldCreateGenre_WhenNameIsUnique()
     {
         // Arrange
-        var handler = new CreateGenreCommandHandler(_mockDbContext);
+        var handler = new CreateGenreCommandHandler(_mockDbContext, _mockCache); // Pass the cache
         var command = new CreateGenreCommand("Strategy");
 
         // Set up an empty Genres DbSet
@@ -46,7 +49,7 @@ public class CreateGenreCommandHandlerTests
     public async Task Handle_ShouldReturnFailure_WhenGenreNameAlreadyExists()
     {
         // Arrange
-        var handler = new CreateGenreCommandHandler(_mockDbContext);
+        var handler = new CreateGenreCommandHandler(_mockDbContext, _mockCache); // Pass the cache
 
         // Command attempts to create "RPG"
         var command = new CreateGenreCommand("RPG");

@@ -3,6 +3,7 @@ using GameStore.Application.Features.Games.Commands;
 using GameStore.Application.Interfaces;
 using GameStore.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using NSubstitute;
 using Xunit;
 
@@ -11,12 +12,14 @@ namespace GameStore.Application.Tests.Features;
 public class UpdateGameCommandHandlerTests
 {
     private readonly IApplicationDbContext _mockDbContext;
+    private readonly HybridCache _mockCache;
     private readonly UpdateGameCommandHandler _handler;
 
     public UpdateGameCommandHandlerTests()
     {
         _mockDbContext = Substitute.For<IApplicationDbContext>();
-        _handler = new UpdateGameCommandHandler(_mockDbContext);
+        _mockCache = Substitute.For<HybridCache>(); // Mock the cache
+        _handler = new UpdateGameCommandHandler(_mockDbContext, _mockCache); // Pass the cache
     }
 
     [Fact]
