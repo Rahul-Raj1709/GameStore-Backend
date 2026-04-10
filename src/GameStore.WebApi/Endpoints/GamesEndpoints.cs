@@ -1,6 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using GameStore.Application.DTOs;
+﻿using GameStore.Application.DTOs;
 using GameStore.Application.Features.Games.Commands;
 using GameStore.Application.Features.Games.Queries;
 using GameStore.Application.Messaging;
@@ -9,6 +7,8 @@ using GameStore.Domain.Shared;
 using GameStore.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace GameStore.WebApi.Endpoints;
 
@@ -139,24 +139,39 @@ public static class GamesEndpoints
         })
         .RequireAuthorization();
 
-        group.MapPut("/reviews/{reviewId:int}", async ([FromRoute] int reviewId, ReviewRequest request, ClaimsPrincipal user, ICommandHandler<UpdateReviewCommand, Result> handler, CancellationToken ct) =>
-        {
-            var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userId = int.Parse(userIdString!);
-            var isSuperAdmin = user.IsInRole(RoleConstants.SuperAdmin);
+        // In GameStore.WebApi/Endpoints/GamesEndpoints.cs
 
-            var result = await handler.Handle(new UpdateReviewCommand(reviewId, userId, request.Rating, request.Comment, isSuperAdmin), ct);
+        group.MapPut("/reviews/{reviewId:int}", async (
+            [FromRoute] int reviewId,
+            ReviewRequest request,
+            ClaimsPrincipal user,
+            ICommandHandler<UpdateReviewCommand, Result> handler,
+            CancellationToken ct) =>
+        {
+            var userId = int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var isSuperAdmin = user.IsInRole(RoleConstants.SuperAdmin);
+            var isAdmin = user.IsInRole(RoleConstants.Admin);
+
+            var result = await handler.Handle(new UpdateReviewCommand(
+                reviewId, userId, request.Rating, request.Comment, isSuperAdmin, isAdmin), ct);
+
             return result.Match(() => Results.NoContent());
         })
         .RequireAuthorization();
 
-        group.MapDelete("/reviews/{reviewId:int}", async ([FromRoute] int reviewId, ClaimsPrincipal user, ICommandHandler<DeleteReviewCommand, Result> handler, CancellationToken ct) =>
+        group.MapDelete("/reviews/{reviewId:int}", async (
+            [FromRoute] int reviewId,
+            ClaimsPrincipal user,
+            ICommandHandler<DeleteReviewCommand, Result> handler,
+            CancellationToken ct) =>
         {
-            var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userId = int.Parse(userIdString!);
+            var userId = int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var isSuperAdmin = user.IsInRole(RoleConstants.SuperAdmin);
+            var isAdmin = user.IsInRole(RoleConstants.Admin);
 
-            var result = await handler.Handle(new DeleteReviewCommand(reviewId, userId, isSuperAdmin), ct);
+            var result = await handler.Handle(new DeleteReviewCommand(
+                reviewId, userId, isSuperAdmin, isAdmin), ct);
+
             return result.Match(() => Results.NoContent());
         })
         .RequireAuthorization();
