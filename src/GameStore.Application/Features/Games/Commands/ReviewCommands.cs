@@ -44,7 +44,13 @@ public class AddReviewCommandHandler(IApplicationDbContext context, HybridCache 
 }
 
 // --- 2. UPDATE REVIEW ---
-public record UpdateReviewCommand(int ReviewId, int UserId, int Rating, string? Comment, bool IsSuperAdmin) : ICommand<Result>;
+public record UpdateReviewCommand(
+    int ReviewId,
+    int UserId,
+    int Rating,
+    string? Comment,
+    bool IsSuperAdmin,
+    bool IsAdmin) : ICommand<Result>;
 
 public class UpdateReviewCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<UpdateReviewCommand, Result> // <-- Injected HybridCache
 {
@@ -55,7 +61,11 @@ public class UpdateReviewCommandHandler(IApplicationDbContext context, HybridCac
         var review = await context.Reviews.Include(r => r.Game).FirstOrDefaultAsync(r => r.Id == request.ReviewId, cancellationToken);
         if (review == null) return Result.Failure(new Error("Review.NotFound", "Review not found."));
 
-        if (!request.IsSuperAdmin && review.UserId != request.UserId) return Result.Failure(new Error("Auth.Forbidden", "You can only edit your own reviews."));
+        bool isAuthor = review.UserId == request.UserId;
+        if (!request.IsSuperAdmin && !isAuthor)
+        {
+            return Result.Failure(new Error("Auth.Forbidden", "You can only edit your own reviews."));
+        }
 
         review.Rating = request.Rating;
         review.Comment = request.Comment;
@@ -72,16 +82,30 @@ public class UpdateReviewCommandHandler(IApplicationDbContext context, HybridCac
 }
 
 // --- 3. DELETE REVIEW ---
-public record DeleteReviewCommand(int ReviewId, int UserId, bool IsSuperAdmin) : ICommand<Result>;
+public record DeleteReviewCommand(
+    int ReviewId,
+    int UserId,
+    bool IsSuperAdmin,
+    bool IsAdmin) : ICommand<Result>;
 
 public class DeleteReviewCommandHandler(IApplicationDbContext context, HybridCache cache) : ICommandHandler<DeleteReviewCommand, Result> // <-- Injected HybridCache
 {
     public async Task<Result> Handle(DeleteReviewCommand request, CancellationToken cancellationToken)
     {
-        var review = await context.Reviews.Include(r => r.Game).FirstOrDefaultAsync(r => r.Id == request.ReviewId, cancellationToken);
+        var review = await context.Reviews
+        .Include(r => r.Game)
+        .FirstOrDefaultAsync(r => r.Id == request.ReviewId, cancellationToken);
+
         if (review == null) return Result.Failure(new Error("Review.NotFound", "Review not found."));
 
-        if (!request.IsSuperAdmin && review.UserId != request.UserId) return Result.Failure(new Error("Auth.Forbidden", "You can only delete your own reviews."));
+        bool isAuthor = review.UserId == request.UserId;
+        bool isGameOwner = request.IsAdmin && review.Game?.OwnerId == request.UserId;
+
+        // Logic: SuperAdmin OR Original Author OR Admin who owns the game
+        if (!request.IsSuperAdmin && !isAuthor && !isGameOwner)
+        {
+            return Result.Failure(new Error("Auth.Forbidden", "You do not have permission to delete this review."));
+        }
 
         context.Reviews.Remove(review);
         await context.SaveChangesAsync(cancellationToken);
