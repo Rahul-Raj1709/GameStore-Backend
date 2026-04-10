@@ -1,6 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using GameStore.Application.DTOs;
+﻿using GameStore.Application.DTOs;
 using GameStore.Application.Features.Users.Commands;
 using GameStore.Application.Features.Users.Queries;
 using GameStore.Application.Messaging;
@@ -9,10 +7,14 @@ using GameStore.Domain.Shared;
 using GameStore.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace GameStore.WebApi.Endpoints;
 
 public record CreateListRequest(string Name);
+public record UpdateProfileRequest(string Name);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 public static class UsersEndpoints
 {
@@ -22,6 +24,34 @@ public static class UsersEndpoints
         var requireSuperAdmin = new AuthorizeAttribute { Roles = RoleConstants.SuperAdmin };
 
         // --- Standard User Endpoints ---
+        group.MapGet("/me", async (ClaimsPrincipal user, IQueryHandler<GetUserDetailsQuery, Result<UserDetailsDto>> handler, CancellationToken ct) =>
+        {
+            var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await handler.Handle(new GetUserDetailsQuery(userId), ct);
+            return result.Match(Results.Ok);
+        });
+
+        group.MapPut("/me", async (UpdateProfileRequest request, ClaimsPrincipal user, ICommandHandler<UpdateUserProfileCommand, Result> handler, CancellationToken ct) =>
+        {
+            var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var result = await handler.Handle(new UpdateUserProfileCommand(int.Parse(userIdString!), request.Name), ct);
+            return result.Match(() => Results.NoContent());
+        });
+
+        group.MapPut("/me/password", async (ChangePasswordRequest request, ClaimsPrincipal user, ICommandHandler<ChangeUserPasswordCommand, Result> handler, CancellationToken ct) =>
+        {
+            var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Note: You may also need the user's email from claims to look them up in IdentityService
+            var result = await handler.Handle(new ChangeUserPasswordCommand(int.Parse(userIdString!), request.CurrentPassword, request.NewPassword), ct);
+            return result.Match(() => Results.NoContent());
+        });
+
         group.MapGet("/me/likes", async (ClaimsPrincipal user, IQueryHandler<GetLikedGamesQuery, Result<List<GameSummaryDto>>> handler, CancellationToken ct) =>
         {
             var userIdString = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;

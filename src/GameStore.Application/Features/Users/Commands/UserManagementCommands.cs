@@ -56,3 +56,45 @@ public class RemoveUserCommandHandler(IApplicationDbContext context, IIdentitySe
         return Result.Success();
     }
 }
+
+public record UpdateUserProfileCommand(int UserId, string Name) : ICommand<Result>;
+
+public class UpdateUserProfileCommandHandler(IApplicationDbContext context) : ICommandHandler<UpdateUserProfileCommand, Result>
+{
+    public async Task<Result> Handle(UpdateUserProfileCommand request, CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync(new object[] { request.UserId }, cancellationToken);
+
+        if (user == null)
+            return Result.Failure(new Error("User.NotFound", "User not found."));
+
+        // Update the user's name
+        user.Name = request.Name;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+}
+
+// --- COMMAND: Change Password ---
+public record ChangeUserPasswordCommand(int UserId, string CurrentPassword, string NewPassword) : ICommand<Result>;
+
+public class ChangeUserPasswordCommandHandler(
+    IApplicationDbContext context,
+    IIdentityService identityService) : ICommandHandler<ChangeUserPasswordCommand, Result>
+{
+    public async Task<Result> Handle(ChangeUserPasswordCommand request, CancellationToken cancellationToken)
+    {
+        // 1. Fetch the user to get their email (since IdentityService usually looks up by email/username)
+        var user = await context.Users.FindAsync(new object[] { request.UserId }, cancellationToken);
+
+        if (user == null)
+            return Result.Failure(new Error("User.NotFound", "User not found."));
+
+        // 2. Delegate the actual password change to the Identity Service
+        var result = await identityService.ChangePasswordAsync(user.Email, request.CurrentPassword, request.NewPassword);
+
+        return result;
+    }
+}
